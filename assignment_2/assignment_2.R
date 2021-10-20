@@ -114,9 +114,37 @@ Hawks %>%
   head()
 
 # 3.2
-
+# see notes
 
 # 3.3
+hal<-Hawks$Hallux # Extract the vector of hallux lengths
+hal<-hal[!is.na(hal)] # Remove any nans
+
+outlier_val<-100
+num_outliers_vect<-seq(0,1000)
+means_vect<-c()
+medians_vect<-c()
+t_means_vect<-c()
+for(num_outliers in num_outliers_vect){
+  corrupted_hal<-c(hal,rep(outlier_val,times=num_outliers))
+  # gives the sample means of corrupted samples with different numbers of outliers
+  means_vect<-c(means_vect,mean(corrupted_hal))
+  medians_vect<-c(medians_vect,median(corrupted_hal))
+  t_means_vect<-c(t_means_vect,mean(corrupted_hal, trim=0.1))
+}
+
+df_means_medians<-data.frame(num_outliers=num_outliers_vect,
+                             mean=means_vect,t_mean=t_means_vect,
+                             median=medians_vect)
+
+df_means_medians%>%
+  # reshape the data
+  pivot_longer(!num_outliers, names_to = "Estimator", values_to = "Value")%>%
+  ggplot(aes(x=num_outliers,color=Estimator,
+             linetype=Estimator,y=Value))+
+  geom_line()+xlab("Number of outliers")
+
+
 
 # 3.4
 # box plot
@@ -125,14 +153,21 @@ weight_box + geom_boxplot() + xlab("Species") + ylab("Weight")
 # Note the outliers displayed as individual dots
 
 # function “num_outliers”
-num_outliers <- funtion(v){
-  
+num_outliers <- function(v){
+  q25<-quantile(v,0.25,na.rm=1)
+  q75<-quantile(v,0.75,na.rm=1)
+  iq_range<-q75-q25
+  outlier<-v[((v>q75+1.5*iq_range)|(v<q25-1.5*iq_range))&!is.na(v)]
+  return(length(outlier))
 }
 
-# 
-Hawks %>% 
-  group_by(Species) %>%
-  summarise(Species, outliers_weight=)
+Hawks%>%
+  group_by(Species)%>%
+  summarise(num_outliers_weight=num_outliers(Weight))%>%
+  head()
+
+#3.5
+# see note
   
 
 
