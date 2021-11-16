@@ -81,10 +81,48 @@ simulation_df<-crossing(trial=seq(num_trials_per_sample_size),
 ggplot(simulation_df, aes(x=sample_size, y=value, color=var) )+labs(x="sample size", y="var")+theme_bw()+
   geom_point()+geom_hline(aes(yintercept=sigma_0))+facet_wrap(~var)
 
+# 5.1 
+set.seed(0)
+num_trials_per_sample_size<-100
+min_sample_size<-5
+max_sample_size<-1000
+sample_size_inc<-5
+lambda<-3
+simulation_df<-crossing(trial=seq(num_trials_per_sample_size),
+                        sample_size=seq(min_sample_size,
+                                        max_sample_size,sample_size_inc))%>%
+  # create data frame of all pairs of sample_size and trial
+  mutate(simulation=pmap(.l=list(trial,sample_size),
+                         .f=~rpois(.y, lambda = lambda)))%>%
+  # simulate sequences of Gaussian random variables
+  mutate(sample_mean=map_dbl(.x=simulation,.f=~mean(.x, na.rm=1)))%>%
+  # compute the sample mean
+  group_by(sample_size)%>%
+  summarise(msq_error_mean=mean((sample_mean-lambda)^2))
 
-  
+ggplot()+geom_smooth(data=simulation_df, aes(x=sample_size, y=msq_error_mean, color="mean"), span=0.4)
 
+# 5.2 
+folder_path<-"C:/Users/Jason/Desktop/R_project/assignment/assignment_6" 
+file_name<-"/VonBortkiewicz.csv" 
+file_path<-paste(folder_path,file_name,sep="") 
 
+# create win_tidy
+fatality_df<-read.csv(file_path,fill = 1) 
+head(fatality_df)
+fatalities<-fatality_df%>%
+  pull(fatalities)
 
-  
-  
+lambda_0<-mean(fatalities, na.rm=1)
+p_0<-dpois(0,lambda = lambda_0)
+
+# 6
+file_name<-"/CustomerPurchases.csv" 
+file_path<-paste(folder_path,file_name,sep="") 
+
+purchase_df<-read.csv(file_path,fill = 1)
+time_diffs<-purchase_df%>%
+  mutate(time_diffs=lead(Time)-Time)%>%
+  pull(time_diffs)
+lambda_MLE<-1/mean(time_diffs, na.rm=1)
+1-pexp(60,rate=lambda_MLE)

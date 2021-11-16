@@ -71,7 +71,7 @@ ggplot(df_combined,aes(x=x,y=y,color=source))+geom_point()+
 # 2.2
 # how to read in a sheet within an excel file as a data frame
 # load the readxl library
-folder_path<-"C:/Users/Jason/Desktop/R_project/firstRProject/assignment_3" 
+folder_path<-"C:/Users/Jason/Desktop/R_project/assignment/assignment_3" 
 file_name<-"/HockeyLeague.xlsx" 
 file_path<-paste(folder_path,file_name,sep="") # create the file_path
 
