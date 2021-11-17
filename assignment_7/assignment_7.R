@@ -162,3 +162,86 @@ scoreci(x=num_successes, n=sample_size, conf.level=1-alpha)
 # compute Wilson's confidence intervals
 
 
+more_than_kg<-function(w){
+    if(w>1000){return(1)}
+    else{return(0)}
+}
+
+RT_weight<-na.omit(RT_weight) 
+more_than_kg_weight<-data.frame(weight=RT_weight)%>%
+  mutate(binary_weight=map(.x=weight, .f=~more_than_kg(.x)))%>%
+  pull(binary_weight)
+alpha<-0.05 # failure probability
+num_successes<- sum(more_than_kg_weight) # total passes
+sample_size<-length(more_than_kg_weight)
+scoreci(x=num_successes, n=sample_size, conf.level=1-alpha)
+
+# 7
+library(Stat2Data)
+data("Airlines")
+on_time<-Airlines%>%
+  filter(airline=="Delta" & airport=="ORD")%>%
+  pull(OnTime)
+
+ifelse(on_time=="Yes",1,0) # convert "yes","no" to 1,0
+
+num_successes<- sum(on_time)
+sample_size<- length(on_time)
+binom.test(num_successes, sample_size, p=0.875, alternative = "two.sided")
+
+# 8 ??
+library(boot) # load the library
+set.seed(123) # set random seed
+#first define a function which computes the mean of a column of interest
+compute_mean<-function(df,indicies,col_name){
+  sub_sample<-df%>%slice(indicies)%>%pull(all_of(col_name)) # extract subsample
+  return(mean(sub_sample,na.rm=1))}# return median
+# use the boot function to generate the bootstrap statistics
+results<-boot(data = penguins,statistic =compute_mean,col_name="body_mass_g",R = 1000)
+# compute the 95%-level confidence interval for the mean
+boot.ci(boot.out = results, type = "basic",conf=0.95)
+
+compute_median<-function(df,indicies,col_name){
+  sub_sample<-df%>%slice(indicies)%>%pull(all_of(col_name)) # extract subsample
+  return(median(sub_sample,na.rm=1))}# return median
+results<-boot(data = Hawks,statistic =compute_median,col_name="Weight",R = 1000)
+# compute the 95%-level confidence interval for the mean
+boot.ci(boot.out = results, type = "basic",conf=0.95)
+
+Hawks%>%
+  ggplot(aes(x=Weight))+geom_density()
+
+penguins%>%
+  ggplot(aes(x=body_mass_g))+geom_density()
+
+# 9
+wilson_confidence_interval<-function(sample, alpha){
+  num_successes<-sum(sample)
+  sample_size<-length(sample)
+  ci<-scoreci(x=num_successes, n=sample_size, conf.level=1-alpha)
+  return(ci$conf.int)
+}
+
+wilson_coverage_probability<-function(gamma){
+  num_trials<-1000
+  n<-100
+  p<-0.5
+  alpha<-1-gamma
+  set.seed(0) # set random seed for reproducibility
+  single_alpha_coverage_simulation_df<-data.frame(trial=seq(num_trials))%>%
+    mutate(sample=map(.x=trial,.f=~rbernoulli(n, p)))%>%
+    # generate random Gaussian samples
+    mutate(ci_interval=map(.x=sample,.f=~wilson_confidence_interval(.x,1-alpha)))%>%
+    # generate confidence intervals
+    mutate(cover=map_lgl(.x=ci_interval,.f=~((min(.x)<=p)&(max(.x)>=p))))%>%
+  # compute interval length
+  coverage_probability<-single_alpha_coverage_simulation_df%>%
+    pull(cover)%>%
+    mean() # estimate of coverage probability
+  
+  return(coverage_probability)
+}
+
+gamma<-seq(0,1,0.01)
+outcome<-map_dbl(.x=gamma, .f=~wilson_coverage_probability(.x))
+ggplot(data.frame(x=gamma, y=outcome), aes(x=x, y=y))+geom_line()
